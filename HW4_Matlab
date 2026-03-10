@@ -2,46 +2,76 @@ clc; clearvars;
 
 % Initialization %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    x_init = 1;             % initial guess
-    x_current = x_init;     % initial guess
-    cc = 10^-4;             % convergence critieria
-    h = 10^-8;              % numerical step size
-    k = 1;                  % counter for loop
-    f_of_x = 0;             % function output at x
-    f_of_x_plus_h =0;       % function output at x plus h
-    residual = f_of_x-0;    % difference between output and solution
-    numericalResidual = 0;  % difference between output and soultion at x+h 
-    m = 0;                  % slope
-    max_iter = 10^2;        % maximum number of iterations to prevent blow up
-    targetValue = 2;
+ x_init = [1; 1; 1];        % initial guess (3x1 vector) [x1, x2, x3]
+    x_current = x_init;        % initial guess (3x1 vector)
+    cc = 10^-4;                % convergence criteria
+    h = 10^-8;                 % numerical step size
+    k = 1;                     % counter for loop
+    F = zeros(3,1);            % output of all 3 functions at x (3x1 vector)
+    F_plus_h = zeros(3,1);     % output of all 3 functions at x plus h (3x1 vector)
+                               % F & F_plus_h are set to zero before being
+                               % filled with values in the loop
+    residual = zeros(3,1);     % difference between output and solution (3x1 vector)
+    J = zeros(3,3);            % jacobian matrix (3x3) replaces scalar slope m
+    max_iter = 10^2;           % maximum number of iterations to prevent blow up
+    targetValue = [2; 5; 4];   % target values for each of the 3 functions (3x1 vector)
+
+
 
 % Newton-Raphson Loop %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     while k<=max_iter       % check to make sure the number of iterations is lower than max allowed
 
-        f_of_x = mySpecialFunction(x_current);   % evaluate current guess
-        residual = f_of_x-targetValue;                     % determine distance from desired goal
+       % evaluates all 3 functions at current guess
+    F(1) = f1(x_current(1), x_current(2), x_current(3)); 
+    F(2) = f2(x_current(1), x_current(2), x_current(3));
+    F(3) = f3(x_current(1), x_current(2), x_current(3));
 
-            if abs(residual)<cc         % determine if current distance from goal is close enough
-                break
-            end
+    % take the current values of x1,x2,x3 and plug them into f2
+    % the result of this is stored as F1,F2,F3
 
-        f_of_x_plus_h = mySpecialFunction(x_current+h);   % evaluate function at small distance from current guess
-        numericalResidual = f_of_x_plus_h-targetValue;    % difference between output and soultion at x+h 
-        m = (numericalResidual-(residual))/h;                     % Determine slop from approximation of derivative
-        x_current=x_current-residual/m;                     % Find next guess from x intercept of slope of tangent line
+    residual = F - targetValue;             % determine distance from desired goal
+                                            % residual is the vector
+                                            % between two points
+
+    if norm(residual) < cc                  % determine if current distance from goal is close enough
+        break                               % use norm because we are collapsing whole vector into one number
+    end                                     % by taking the sqrt(x1² + x2² + x3²)
+
+    for i = 1:3                             % build jacobian matrix column by column
+        x_pert = x_current;                 % copy current guess
+        x_pert(i) = x_pert(i) + h;          % perturb the i-th variable by small step h
+
+        % evaluate all 3 functions at perturbed point
+        F_plus_h(1) = f1(x_pert(1), x_pert(2), x_pert(3));
+        F_plus_h(2) = f2(x_pert(1), x_pert(2), x_pert(3));
+        F_plus_h(3) = f3(x_pert(1), x_pert(2), x_pert(3));
+
+        J(:,i) = (F_plus_h - F) / h;       % determine slope from approximation of derivative
+    end                                    % determining the change in ouput from nudging inputs
+
+    x_current = x_current - J \ residual;  % find next guess from x intercept of slope of tangent line
+    k = k + 1;                             % track number of iterations
+end                                        % figures out how far to move in 3 dimensions to get to solution
+
     
-        k=k+1;                                            % track number if iterations
-    end
-    
-% Plots %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    x = linspace(-1.2,-0.5);
-    y = mySpecialFunction(x);
+% display results
+fprintf('Solution found in %d iterations:\n', k);
+fprintf('x1 = %.6f\n', x_current(1));
+fprintf('x2 = %.6f\n', x_current(2));
+fprintf('x3 = %.6f\n', x_current(3));
 
-    plot(x,y)
-    hold on
-    grid on
+% functions %
+function result = f1(x1, x2, x3)          % chose random functions
+    result = x1^2 + x2 + x3;              % function 1
+end
 
-    plot(x_current,f_of_x,'*k')
+function result = f2(x1, x2, x3)
+    result = x1 + x2^2 + x3;              % function 2
+end  
+
+function result = f3(x1, x2, x3)
+    result = x1 + x2 + x3^2;              % function 3
+end
+
 
